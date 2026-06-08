@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Krishi Mitra | Empowering Indian Farmers</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-green: #2d5a27;
+            --light-green: #e8f5e9;
+            --accent-gold: #fbc02d;
+            --text-dark: #333;
+            --bg-gray: #f4f7f6;
+            --white: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-gray);
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        /* --- AUTHENTICATION STYLES --- */
+        #auth-container {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+            background-size: cover;
+        }
+
+        .auth-card {
+            background: var(--white);
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .auth-card h2 {
+            color: var(--primary-green);
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary-green);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-main:hover {
+            background: #1e3d1a;
+        }
+
+        .switch-auth {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            color: var(--primary-green);
+        }
+
+        /* --- MAIN LAYOUT --- */
+        #main-app {
+            display: none;
+            height: 100vh;
+            grid-template-columns: 260px 1fr;
+        }
+
+        .sidebar {
+            background: var(--primary-green);
+            color: white;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar h1 {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 1rem;
+        }
+
+        .nav-item {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .content-area {
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        /* --- DASHBOARD WIDGETS --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid var(--primary-green);
+        }
+
+        .stat-card h4 {
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+
+        .stat-card .status {
+            font-size: 0.85rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .status.healthy {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+
+        /* --- MAPS --- */
+        #map-view,
+        #satellite-map {
+            height: 450px;
+            width: 100%;
+            border-radius: 12px;
+            z-index: 1;
+        }
+
+        .view-section {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* --- SATELLITE CONTROLS --- */
+        .sat-controls {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 1.5rem;
+        }
+
+        .filter-panel {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="auth-container">
+        <div class="auth-card" id="login-card">
+            <h2>Krishi Mitra</h2>
+            <p style="margin-bottom: 20px;">Kisan Login</p>
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" id="login-email" placeholder="farmer@krishimitra.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="login-pass" placeholder="••••••••">
+            </div>
+            <button class="btn-main" onclick="handleLogin()">Login</button>
+            <p class="switch-auth" onclick="toggleAuth()">Naya account banayein (Sign Up)</p>
+        </div>
+
+        <div class="auth-card" id="signup-card" style="display: none;">
+            <h2>Register</h2>
+            <div class="input-group">
+                <label>Pura Naam (Full Name)</label>
+                <input type="text" id="reg-name" placeholder="Ex: Rajesh Kumar">
+            </div>
+            <div class="input-group">
+                <label>State</label>
+                <select id="reg-state">
+                    <option>Uttar Pradesh</option>
+                    <option>Punjab</option>
+                    <option>Maharashtra</option>
+                    <option>Rajasthan</option>
+                    <option>Haryana</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Naya Password</label>
+                <input type="password" id="reg-pass" placeholder="Min 6 chars">
+            </div>
+            <button class="btn-main" onclick="handleSignup()">Create Account</button>
+            <p class="switch-auth" onclick="toggleAuth()">Pehle se account hai? Login</p>
+        </div>
+    </div>
+
+    <div id="main-app">
+        <div class="sidebar">
+            <h1>Krishi Mitra</h1>
+            <div class="nav-item active" onclick="showSection('dash')">
+                <i class="fas fa-th-large"></i> Dashboard
+            </div>
+            <div class="nav-item" onclick="showSection('farms')">
+                <i class="fas fa-seedling"></i> My Farms
+            </div>
+            <div class="nav-item" onclick="showSection('satellite')">
+                <i class="fas fa-satellite"></i> Satellite Data
+            </div>
+            <div class="nav-item" onclick="showSection('settings')">
+                <i class="fas fa-cog"></i> Settings
+            </div>
+            <div class="nav-item" style="margin-top: auto;" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="header-top">
+                <div>
+                    <h2 id="welcome-msg">Namaste, Farmer</h2>
+                    <p style="color: #666; font-size: 0.9rem;" id="current-date"></p>
+                </div>
+                <div style="text-align: right;">
+                    <strong>Location:</strong> <span id="user-location">Uttar Pradesh, India</span>
+                </div>
+            </div>
+
+            <section id="dash-section" class="view-section active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>Soil Moisture</h4>
+                        <div class="value">42%</div>
+                        <span class="status healthy">Optimal for Wheat</span>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Soil pH</h4>
+                        <div class="value">6.8</div>
+                        <span class="status healthy">Slightly Acidic (Good)</span>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Temperature</h4>
+                        <div class="value">28°C</div>
+                        <p style="font-size: 0.8rem;">Humidity: 65%</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Crop Health (NDVI)</h4>
+                        <div class="value">0.74</div>
+                        <span class="status healthy">Healthy</span>
+                    </div>
+                </div>
+
+                <div class="stats-grid" style="grid-template-columns: 2fr 1fr;">
+                    <div class="stat-card">
+                        <h4>Weather Forecast</h4>
+                        <div style="display: flex; justify-content: space-around; padding: 20px;">
+                            <div style="text-align: center;"><i class="fas fa-sun fa-2x"></i>
+                                <p>Mon<br>31°C</p>
+                            </div>
+                            <div style="text-align: center;"><i class="fas fa-cloud-rain fa-2x"></i>
+                                <p>Tue<br>28°C</p>
+                            </div>
+                            <div style="text-align: center;"><i class="fas fa-cloud fa-2x"></i>
+                                <p>Wed<br>29°C</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Irrigation Advice</h4>
+                        <div class="value" style="color: #f57c00;">Wait</div>
+                        <p>Soil moisture sufficient for next 48 hours.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="farms-section" class="view-section">
+                <h3>Bharat – Krishi Dashboard</h3>
+                <p style="margin-bottom: 1.5rem;">Apna Rajya Chune (Select State)</p>
+                <div style="margin-bottom: 1rem;">
+                    <select id="state-selector" onchange="updateMap()" style="padding: 10px; border-radius: 5px;">
+                        <option value="[20.5937, 78.9629]">🇮🇳 Poora Bharat (All India)</option>
+                        <optgroup label="States">
+                            <option value="[15.9129, 78.6675]">Andhra Pradesh</option>
+                            <option value="[28.2180, 94.7278]">Arunachal Pradesh</option>
+                            <option value="[26.1445, 92.9514]">Assam</option>
+                            <option value="[25.2951, 85.3639]">Bihar</option>
+                            <option value="[21.9168, 81.8661]">Chhattisgarh</option>
+                            <option value="[15.2993, 73.8143]">Goa</option>
+                            <option value="[22.2587, 71.1924]">Gujarat</option>
+                            <option value="[29.0588, 77.0745]">Haryana</option>
+                            <option value="[31.7433, 77.1205]">Himachal Pradesh</option>
+                            <option value="[23.6102, 85.2799]">Jharkhand</option>
+                            <option value="[15.3173, 75.7139]">Karnataka</option>
+                            <option value="[10.8505, 76.2711]">Kerala</option>
+                            <option value="[22.9375, 78.6553]">Madhya Pradesh</option>
+                            <option value="[19.7515, 75.7139]">Maharashtra</option>
+                            <option value="[24.6637, 93.9063]">Manipur</option>
+                            <option value="[25.4670, 91.3662]">Meghalaya</option>
+                            <option value="[23.1815, 93.9776]">Mizoram</option>
+                            <option value="[26.1552, 94.5624]">Nagaland</option>
+                            <option value="[20.9517, 85.0985]">Odisha</option>
+                            <option value="[31.5497, 74.3436]">Punjab</option>
+                            <option value="[27.0238, 74.2179]">Rajasthan</option>
+                            <option value="[28.1083, 88.1725]">Sikkim</option>
+                            <option value="[11.1271, 78.6569]">Tamil Nadu</option>
+                            <option value="[18.1124, 79.0193]">Telangana</option>
+                            <option value="[23.8103, 91.2868]">Tripura</option>
+                            <option value="[26.8467, 80.9462]">Uttar Pradesh</option>
+                            <option value="[30.0668, 79.0193]">Uttarakhand</option>
+                            <option value="[24.5355, 88.2639]">West Bengal</option>
+                        </optgroup>
+                        <optgroup label="Union Territories">
+                            <option value="[12.1697, 92.7784]">Andaman and Nicobar Islands</option>
+                            <option value="[30.7333, 76.7794]">Chandigarh</option>
+                            <option value="[20.2480, 73.0997]">Dadra and Nagar Haveli</option>
+                            <option value="[20.2649, 72.9164]">Daman and Diu</option>
+                            <option value="[28.7041, 77.1025]">Delhi</option>
+                            <option value="[33.7782, 76.5769]">Jammu and Kashmir</option>
+                            <option value="[33.9391, 77.6245]">Ladakh</option>
+                            <option value="[12.9352, 79.8338]">Puducherry</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div id="map-view"></div>
+                <div class="stat-card" style="margin-top: 1.5rem; background: var(--light-green);">
+                    <p><strong>Note:</strong> Krishi Mitra aapko mitti aur mausam ki sahi jaankari deta hai taaki aapki
+                        fasal aur behtar ho.</p>
+                </div>
+            </section>
+
+            <section id="satellite-section" class="view-section">
+                <h3>EO Data Range Dashboard</h3>
+                <div class="sat-controls">
+                    <div class="filter-panel">
+                        <div class="input-group">
+                            <label>Date Range</label>
+                            <input type="date" value="2025-12-13">
+                            <input type="date" value="2026-01-12" style="margin-top: 10px;">
+                        </div>
+                        <div class="input-group">
+                            <label>Satellite</label>
+                            <select>
+                                <option>Sentinel-2</option>
+                                <option>Landsat-8</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Index</label>
+                            <select>
+                                <option>NDVI (Vegetation)</option>
+                                <option>EVI (Enhanced)</option>
+                            </select>
+                        </div>
+                        <button class="btn-main">Analyze Data</button>
+                    </div>
+                    <div id="satellite-map"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // --- APP STATE & NAVIGATION ---
+        let mainMap, satMap;
+
+        // STATE MANAGEMENT
+        const mapState = {
+            main: {
+                center: [20.5937, 78.9629],
+                zoom: 5,
+                selectedState: null,
+                selectedCoords: null
+            },
+            satellite: {
+                center: [20.5937, 78.9629],
+                zoom: 4,
+                selectedState: null
+            }
+        };
+
+        window.onload = () => {
+            const user = localStorage.getItem('km_user');
+            if (user) {
+                // Load saved map state for this user
+                const savedState = localStorage.getItem(`km_mapstate_${JSON.parse(user).email}`);
+                if (savedState) {
+                    Object.assign(mapState, JSON.parse(savedState));
+                }
+                showApp(JSON.parse(user).name);
+            }
+            document.getElementById('current-date').innerText = new Date().toDateString();
+        };
+
+        function toggleAuth() {
+            const login = document.getElementById('login-card');
+            const signup = document.getElementById('signup-card');
+            login.style.display = login.style.display === 'none' ? 'block' : 'none';
+            signup.style.display = signup.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            if (email) {
+                const user = { name: email.split('@')[0], email: email };
+                localStorage.setItem('km_user', JSON.stringify(user));
+                showApp(user.name);
+            } else {
+                alert("Please enter details");
+            }
+        }
+
+        function handleSignup() {
+            const name = document.getElementById('reg-name').value;
+            if (name) {
+                localStorage.setItem('km_user', JSON.stringify({ name: name }));
+                showApp(name);
+            }
+        }
+
+        function showApp(userName) {
+            document.getElementById('auth-container').style.display = 'none';
+            document.getElementById('main-app').style.display = 'grid';
+            document.getElementById('welcome-msg').innerText = `Namaste, ${userName}`;
+            initMaps();
+        }
+
+        function showSection(section) {
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            document.getElementById(`${section}-section`).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            // Recalculate maps when shown
+            setTimeout(() => {
+                mainMap.invalidateSize();
+                satMap.invalidateSize();
+            }, 200);
+        }
+
+        function logout() {
+            // Save map state before logout
+            const user = JSON.parse(localStorage.getItem('km_user'));
+            if (user && user.email) {
+                localStorage.setItem(`km_mapstate_${user.email}`, JSON.stringify(mapState));
+            }
+            localStorage.removeItem('km_user');
+            location.reload();
+        }
+
+        // --- SAVE STATE UTILITY ---
+        function saveMapState() {
+            const user = JSON.parse(localStorage.getItem('km_user'));
+            if (user && user.email) {
+                // Capture current view
+                if (mainMap) {
+                    const center = mainMap.getCenter();
+                    mapState.main.center = [center.lat, center.lng];
+                    mapState.main.zoom = mainMap.getZoom();
+                }
+                if (satMap) {
+                    const center = satMap.getCenter();
+                    mapState.satellite.center = [center.lat, center.lng];
+                    mapState.satellite.zoom = satMap.getZoom();
+                }
+                localStorage.setItem(`km_mapstate_${user.email}`, JSON.stringify(mapState));
+            }
+        }
+
+        // --- MAP LOGIC ---
+        function initMaps() {
+            // Main Farm Map
+            mainMap = L.map('map-view', {
+                zoom: mapState.main.zoom,
+                center: mapState.main.center,
+                scrollWheelZoom: true,  // Enable mouse wheel zoom
+                zoomControl: true       // Show +/- zoom buttons
+            }).setView(mapState.main.center, mapState.main.zoom);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(mainMap);
+
+            // Restore only the selected state marker
+            if (mapState.main.selectedCoords) {
+                L.marker(mapState.main.selectedCoords).addTo(mainMap).bindPopup(mapState.main.selectedState);
+            } else {
+                L.marker([20.5937, 78.9629]).addTo(mainMap).bindPopup('Krishi Mitra Monitoring Point').openPopup();
+            }
+
+            // Save state on map interaction
+            mainMap.on('moveend zoomend', saveMapState);
+
+            // Add custom zoom controls (optional: buttons)
+            addZoomControls(mainMap, 'main');
+
+            // Satellite Map
+            satMap = L.map('satellite-map', {
+                zoom: mapState.satellite.zoom,
+                center: mapState.satellite.center,
+                scrollWheelZoom: true,
+                zoomControl: true
+            }).setView(mapState.satellite.center, mapState.satellite.zoom);
+
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles © Esri'
+            }).addTo(satMap);
+
+            satMap.on('moveend zoomend', saveMapState);
+
+            addZoomControls(satMap, 'satellite');
+        }
+
+        function addZoomControls(map, mapType) {
+            // Custom zoom control group
+            const controlHtml = `
+                <div style="display: flex; flex-direction: column; gap: 5px; background: white; padding: 5px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                    <button onclick="zoomMapIn('${mapType}')" style="width: 30px; height: 30px; background: var(--primary-green); color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">+</button>
+                    <button onclick="zoomMapOut('${mapType}')" style="width: 30px; height: 30px; background: var(--primary-green); color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">−</button>
+                    <button onclick="resetMapView('${mapType}')" style="width: 30px; height: 30px; background: var(--accent-gold); color: var(--text-dark); border: none; border-radius: 3px; cursor: pointer; font-weight: bold; font-size: 10px;">⟲</button>
+                </div>
+            `;
+
+            const control = L.DomUtil.create('div');
+            control.innerHTML = controlHtml;
+            control.style.position = 'absolute';
+            control.style.top = '10px';
+            control.style.right = '10px';
+            control.style.zIndex = '1000';
+            map.getContainer().appendChild(control);
+        }
+
+        // Zoom functions
+        function zoomMapIn(mapType) {
+            const map = mapType === 'main' ? mainMap : satMap;
+            map.setZoom(map.getZoom() + 1);
+            saveMapState();
+        }
+
+        function zoomMapOut(mapType) {
+            const map = mapType === 'main' ? mainMap : satMap;
+            map.setZoom(map.getZoom() - 1);
+            saveMapState();
+        }
+
+        function resetMapView(mapType) {
+            const map = mapType === 'main' ? mainMap : satMap;
+            const defaultView = mapType === 'main' ? [20.5937, 78.9629] : [20.5937, 78.9629];
+            const defaultZoom = mapType === 'main' ? 5 : 4;
+            map.flyTo(defaultView, defaultZoom);
+            saveMapState();
+        }
+
+        function updateMap() {
+            const selector = document.getElementById('state-selector');
+            const coords = JSON.parse(selector.value);
+            const selectedText = selector.options[selector.selectedIndex].text;
+
+            // Clear all markers and add only selected one
+            mainMap.eachLayer(layer => {
+                if (layer instanceof L.Marker) {
+                    mainMap.removeLayer(layer);
+                }
+            });
+
+            // Add only the selected state marker
+            L.marker(coords).addTo(mainMap).bindPopup(selectedText).openPopup();
+            mainMap.flyTo(coords, 7);
+
+            // Save only the selected state (not history)
+            mapState.main.selectedState = selectedText;
+            mapState.main.selectedCoords = coords;
+            saveMapState();
+        }
+    </script>
+</body>
+
+</html>
